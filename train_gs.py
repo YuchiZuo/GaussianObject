@@ -250,7 +250,8 @@ def cal_loss(opt, args, image, render_pkg, viewpoint_cam, bg, silhouette_loss_ty
         gt_image = gt_image * viewpoint_cam.mask + bg[:, None, None] * (1 - viewpoint_cam.mask).squeeze()
     Ll1 = l1_loss(image, gt_image)
     Lssim = (1.0 - ssim(image, gt_image))
-    loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
+    # loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
+    loss = Ll1
     if tb_writer is not None:
         tb_writer.add_scalar('loss/l1_loss', Ll1, iteration)
         tb_writer.add_scalar('loss/ssim_loss', Lssim, iteration)
@@ -296,7 +297,8 @@ def cal_loss(opt, args, image, render_pkg, viewpoint_cam, bg, silhouette_loss_ty
         else:
             raise NotImplementedError
 
-        loss = loss + args.mono_depth_weight * depth_loss
+        # loss = loss + args.mono_depth_weight * depth_loss
+        
         if tb_writer is not None:
             tb_writer.add_scalar('loss/depth_loss', depth_loss, iteration)
 
