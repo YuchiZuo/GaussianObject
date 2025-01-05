@@ -3,7 +3,7 @@ python train_gs.py \
     -s data/R63_two_view \
     -m output/gs_init/my_car \
     -r 4 \
-    --sparse_view_num 2 \
+    --sparse_view_num 3 \
     --sh_degree 2 \
     --init_pcd_name Point3D \
     --save_iterations 1 50 100 \

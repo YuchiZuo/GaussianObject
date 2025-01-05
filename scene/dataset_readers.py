@@ -91,16 +91,22 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, extra_opts=
 
         if intr.model=="SIMPLE_PINHOLE":
             focal_length_x = intr.params[0]
+            cx = intr.params[1]
+            cy = intr.params[2]
             FovY = focal2fov(focal_length_x, height)
             FovX = focal2fov(focal_length_x, width)
         elif intr.model=="PINHOLE": 
             focal_length_x = intr.params[0]
             focal_length_y = intr.params[1]
+            cx = intr.params[2]
+            cy = intr.params[3]
             FovY = focal2fov(focal_length_y, height)
             FovX = focal2fov(focal_length_x, width)
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
+        cx = (cx - width / 2) / width * 2
+        cy = (cy - height / 2) / height * 2
         image_path = osp.join(images_folder, osp.basename(extr.name))
         image_name = osp.basename(image_path).split(".")[0]
         image = Image.open(image_path)
@@ -117,7 +123,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, extra_opts=
 
         mono_depth = None
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
+        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, cx=cx, cy=cy,image=image,
                               image_path=image_path, image_name=image_name, 
                               width=width, height=height, mask=mask, mono_depth=mono_depth)
         cam_infos.append(cam_info)

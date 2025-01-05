@@ -30,6 +30,8 @@ class CameraInfo(NamedTuple):
     T: np.ndarray
     FovY: np.ndarray
     FovX: np.ndarray
+    cx: np.array
+    cy: np.array
     image: np.ndarray
     image_path: str
     image_name: str
@@ -101,13 +103,13 @@ def loadCam(args,
 
     if cam_info.is_dust3r:
         return Camera_w_pose(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
-                      FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
+                      FoVx=cam_info.FovX, FoVy=cam_info.FovY, cx=cam_info.cx, cy=cam_info.cy,
                       image=gt_image, gt_alpha_mask=loaded_mask, mono_depth=mono_depth,
                       image_name=cam_info.image_name, uid=id, 
                       data_device=args.data_device, white_background=args.white_background)
     else:
         return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
-                      FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
+                      FoVx=cam_info.FovX, FoVy=cam_info.FovY, cx=cam_info.cx, cy=cam_info.cy,
                       image=gt_image, gt_alpha_mask=loaded_mask, mono_depth=mono_depth,
                       image_name=cam_info.image_name, uid=id, 
                       data_device=args.data_device, white_background=args.white_background)
@@ -486,6 +488,8 @@ def generate_ellipse_path_from_camera_infos(
             T = T,
             FovY = cam_infos[0].FovY,
             FovX = cam_infos[0].FovX,
+            cx = cam_infos[0].cx,
+            cy = cam_infos[0].cy,            
             image = np.zeros_like(cam_infos[0].image),
             image_path = '',
             image_name = f'{uid:05d}.png',

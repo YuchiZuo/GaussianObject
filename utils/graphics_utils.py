@@ -61,7 +61,7 @@ def getWorld2View2_tensor(R, t, translate=torch.tensor([.0, .0, .0]), scale=1.0)
     Rt = torch.linalg.inv(C2W)
     return Rt.float()
 
-def getProjectionMatrix(znear, zfar, fovX, fovY):
+def getProjectionMatrix(znear, zfar, fovX, fovY,cx,cy):
     tanHalfFovY = math.tan((fovY / 2))
     tanHalfFovX = math.tan((fovX / 2))
 
@@ -77,8 +77,8 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
     # this is openCV coordinate system
     P[0, 0] = 2.0 * znear / (right - left)
     P[1, 1] = 2.0 * znear / (top - bottom)
-    P[0, 2] = (right + left) / (right - left)
-    P[1, 2] = (top + bottom) / (top - bottom)
+    P[0, 2] = cx
+    P[1, 2] = cy
     P[3, 2] = z_sign
     P[2, 2] = z_sign * zfar / (zfar - znear)
     P[2, 3] = -(zfar * znear) / (zfar - znear)
