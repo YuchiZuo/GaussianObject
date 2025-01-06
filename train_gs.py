@@ -27,13 +27,14 @@ from gaussian_renderer import network_gui
 from scene import GaussianModel, Scene
 from utils.general_utils import safe_state
 from utils.image_utils import psnr
-from utils.loss_utils import l1_loss, ssim, monodisp
+from utils.loss_utils import l1_loss,l2_loss, ssim, monodisp
 from utils.pose_utils import update_pose, get_loss_tracking
 from torch.utils.tensorboard.writer import SummaryWriter
 TENSORBOARD_FOUND = True
 
 def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
-    if args.use_dust3r:
+    w_pose = False
+    if w_pose:
         print('Use pose refinement from dust3r')
         from gaussian_renderer import render_w_pose as render
     else:
@@ -86,7 +87,7 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
             viewpoint_stack = scene.getTrainCameras().copy()
         viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
 
-        if args.use_dust3r:
+        if w_pose:
             pose_opt_params = [
                 {
                     "params": [viewpoint_cam.cam_rot_delta],
@@ -134,26 +135,26 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
                 scene.save(iteration)
 
             # Densification
-            if iteration < opt.densify_until_iter and num_gauss < opt.max_num_splats:
-                # Keep track of max radii in image-space for pruning
-                gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
-                gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
+            # if iteration < opt.densify_until_iter and num_gauss < opt.max_num_splats:
+            #     # Keep track of max radii in image-space for pruning
+            #     gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
+            #     gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-                if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
-                    size_threshold = 20 if iteration > opt.opacity_reset_interval else None
-                    gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
+            #     if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
+            #         size_threshold = 20 if iteration > opt.opacity_reset_interval else None
+            #         gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
                 
-                if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
-                    gaussians.reset_opacity()
+            #     if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
+            #         gaussians.reset_opacity()
 
-                if iteration % opt.remove_outliers_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
-                    gaussians.remove_outliers(opt, iteration, linear=True)
+            #     if iteration % opt.remove_outliers_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
+            #         gaussians.remove_outliers(opt, iteration, linear=True)
 
             # Optimizer step
             if iteration < opt.iterations:
                 gaussians.optimizer.step()
                 gaussians.optimizer.zero_grad(set_to_none = True)
-                if args.use_dust3r and iteration < opt.pose_iterations:
+                if w_pose and iteration < opt.pose_iterations:
                     pose_optimizer.step()
                     pose_optimizer.zero_grad(set_to_none = True)
                     _ = update_pose(viewpoint_cam)
@@ -162,21 +163,21 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
                 print("\n[ITER {}] Saving Checkpoint".format(iteration))
                 torch.save((gaussians.capture(), iteration), scene.model_path + "/ckpt" + str(iteration) + ".pth")
 
-    if args.use_dust3r:
-        with open(os.path.join(dataset.source_path, f'dust3r_{args.sparse_view_num}.json'), 'r') as f:
-            json_cameras = json.load(f)
-        refined_cameras = []
-        for viewpoint_cam, json_camera in zip(scene.getTrainCameras(), json_cameras):
-            camera = json_camera
-            w2c = np.eye(4)
-            w2c[:3, :3] = viewpoint_cam.R.T
-            w2c[:3, 3] = viewpoint_cam.T
-            c2w = np.linalg.inv(w2c)
-            camera['position'] = c2w[:3, 3].tolist()
-            camera['rotation'] = c2w[:3, :3].tolist()
-            refined_cameras.append(camera)
-        with open(os.path.join(scene.model_path, 'refined_cams.json'), 'w') as f:
-            json.dump(refined_cameras, f, indent=4)
+    # if args.use_dust3r:
+    #     with open(os.path.join(dataset.source_path, f'dust3r_{args.sparse_view_num}.json'), 'r') as f:
+    #         json_cameras = json.load(f)
+    #     refined_cameras = []
+    #     for viewpoint_cam, json_camera in zip(scene.getTrainCameras(), json_cameras):
+    #         camera = json_camera
+    #         w2c = np.eye(4)
+    #         w2c[:3, :3] = viewpoint_cam.R.T
+    #         w2c[:3, 3] = viewpoint_cam.T
+    #         c2w = np.linalg.inv(w2c)
+    #         camera['position'] = c2w[:3, 3].tolist()
+    #         camera['rotation'] = c2w[:3, :3].tolist()
+    #         refined_cameras.append(camera)
+    #     with open(os.path.join(scene.model_path, 'refined_cams.json'), 'w') as f:
+    #         json.dump(refined_cameras, f, indent=4)
 
 def prepare_output_and_logger(args):
     if not args.model_path:
@@ -244,16 +245,16 @@ def cal_loss(opt, args, image, render_pkg, viewpoint_cam, bg, silhouette_loss_ty
     l1 loss: Ll1 = l1_loss(image, gt_image)
     ssim loss: Lssim = 1 - ssim(image, gt_image)
     Optional: [silhouette loss, monodepth loss]
-    """
+    """ 
     gt_image = viewpoint_cam.original_image.to(image.dtype).cuda()
     if opt.random_background:
         gt_image = gt_image * viewpoint_cam.mask + bg[:, None, None] * (1 - viewpoint_cam.mask).squeeze()
-    Ll1 = l1_loss(image, gt_image)
+    L_loss = l1_loss(image, gt_image)
     Lssim = (1.0 - ssim(image, gt_image))
-    # loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
-    loss = Ll1
+    loss = (1.0 - opt.lambda_dssim) * L_loss + opt.lambda_dssim * Lssim
+    # loss = Ll2
     if tb_writer is not None:
-        tb_writer.add_scalar('loss/l1_loss', Ll1, iteration)
+        tb_writer.add_scalar('loss/l1_loss', L_loss, iteration)
         tb_writer.add_scalar('loss/ssim_loss', Lssim, iteration)
 
     if hasattr(args, "use_mask") and args.use_mask:
@@ -302,14 +303,14 @@ def cal_loss(opt, args, image, render_pkg, viewpoint_cam, bg, silhouette_loss_ty
         if tb_writer is not None:
             tb_writer.add_scalar('loss/depth_loss', depth_loss, iteration)
 
-    if args.use_dust3r:
+    if w_pose:
         image_ab = (torch.exp(viewpoint_cam.exposure_a)) * image + viewpoint_cam.exposure_b
         tracking_loss = get_loss_tracking(image_ab, render_pkg["rendered_alpha"], viewpoint_cam) + args.lambda_t_norm * torch.abs(viewpoint_cam.cam_trans_delta).mean()
         loss = loss + tracking_loss
         if tb_writer is not None:
             tb_writer.add_scalar('loss/tracking_loss', tracking_loss, iteration)
 
-    return loss, Ll1
+    return loss, L_loss
 
 if __name__ == "__main__":
     # Set up command line argument parser
