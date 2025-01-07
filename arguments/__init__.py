@@ -80,9 +80,12 @@ class OptimizationParams(ParamGroup):
         self.position_lr_delay_mult = 0       
         self.position_lr_max_steps = 30_000 # [default 30_000]
         self.feature_lr = 0.0025 # [default 0.0025]
-        self.opacity_lr = 0.05 # [default 0.05]
-        self.scaling_lr = 0.005 # [default 0.005]
-        self.rotation_lr = 0.001 # [default 0.001]
+        # self.opacity_lr = 0.05 # [default 0.05]
+        # self.scaling_lr = 0.005 # [default 0.005]
+        # self.rotation_lr = 0.001 # [default 0.001]
+        self.opacity_lr = 0 # [default 0.05]
+        self.scaling_lr = 0 # [default 0.005]
+        self.rotation_lr = 0 # [default 0.001]
         self.percent_dense = 0.01 # [default 0.01] percent_dense * scene_extent = threshold size to determine whether to split (current is too large) or clone (current is small) gaussian
         self.lambda_dssim = 0.2 # [default 0.2] Loss = (1-lambda) * L1_loss + lambda * D-SSIM_Loss. L1 = abs(pred_pixel - true_pixel). SSIM = similarity between 2 images (luminance, contrast, structure)
         self.lambda_silhouette = 0.01 # [default 0.01] use bce loss for silhouette

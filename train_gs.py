@@ -114,8 +114,10 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
 
         # Loss
         loss, Ll1 = cal_loss(opt, args, image, render_pkg, viewpoint_cam, bg, tb_writer=tb_writer, iteration=iteration, mono_loss_type=args.mono_loss_type,w_pose=args.w_pose)
-        loss_normal = cal_normal_loss(gaussians)
-        loss = loss + 0.01 * loss_normal
+        if args.normal_loss:
+            loss_normal = cal_normal_loss(gaussians)
+            loss = loss + 0.01 * loss_normal
+            Ll1 = loss_normal
         
         
         loss.backward()
@@ -132,7 +134,7 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
                 progress_bar.close()
 
             # Log and save
-            training_report(tb_writer, iteration, loss_normal, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background))
+            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background))
             if (iteration in saving_iterations):
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
@@ -208,9 +210,9 @@ def prepare_output_and_logger(args):
         print("Tensorboard not available: not logging progress")
     return tb_writer
 
-def training_report(tb_writer, iteration, loss_normal, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs):
+def training_report(tb_writer, iteration, L1l, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs):
     if tb_writer:
-        tb_writer.add_scalar('train_loss_patches/normal_loss', loss_normal.item(), iteration)
+        tb_writer.add_scalar('train_loss_patches/L1/Normal', L1l.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss.item(), iteration)
         tb_writer.add_scalar('iter_time', elapsed, iteration)
         tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)
@@ -357,7 +359,8 @@ if __name__ == "__main__":
                         help='use diff-gaussian-rasterization-w-pose ')   
     parser.add_argument('--freeze_pos', action='store_true', default=False,
                         help='freeze_pos')      
-
+    parser.add_argument('--normal_loss', action='store_true', default=False,
+                        help='use normal_loss') 
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
     print("Optimizing " + args.model_path)
