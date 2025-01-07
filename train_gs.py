@@ -33,8 +33,8 @@ from torch.utils.tensorboard.writer import SummaryWriter
 TENSORBOARD_FOUND = True
 
 def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
-    w_pose = False
-    if w_pose:
+
+    if args.w_pose:
         print('Use pose refinement from dust3r')
         from gaussian_renderer import render_w_pose as render
     else:
@@ -87,7 +87,7 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
             viewpoint_stack = scene.getTrainCameras().copy()
         viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
 
-        if w_pose:
+        if args.w_pose:
             pose_opt_params = [
                 {
                     "params": [viewpoint_cam.cam_rot_delta],
@@ -135,26 +135,29 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
                 scene.save(iteration)
 
             # Densification
-            # if iteration < opt.densify_until_iter and num_gauss < opt.max_num_splats:
-            #     # Keep track of max radii in image-space for pruning
-            #     gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
-            #     gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
+            if args.freeze_pos:
+                pass
+            else:
+                if iteration < opt.densify_until_iter and num_gauss < opt.max_num_splats:
+                    # Keep track of max radii in image-space for pruning
+                    gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
+                    gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-            #     if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
-            #         size_threshold = 20 if iteration > opt.opacity_reset_interval else None
-            #         gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
-                
-            #     if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
-            #         gaussians.reset_opacity()
+                    if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
+                        size_threshold = 20 if iteration > opt.opacity_reset_interval else None
+                        gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
+                    
+                    if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
+                        gaussians.reset_opacity()
 
-            #     if iteration % opt.remove_outliers_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
-            #         gaussians.remove_outliers(opt, iteration, linear=True)
+                    if iteration % opt.remove_outliers_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
+                        gaussians.remove_outliers(opt, iteration, linear=True)
 
             # Optimizer step
             if iteration < opt.iterations:
                 gaussians.optimizer.step()
                 gaussians.optimizer.zero_grad(set_to_none = True)
-                if w_pose and iteration < opt.pose_iterations:
+                if args.w_pose and iteration < opt.pose_iterations:
                     pose_optimizer.step()
                     pose_optimizer.zero_grad(set_to_none = True)
                     _ = update_pose(viewpoint_cam)
@@ -342,6 +345,10 @@ if __name__ == "__main__":
     parser.add_argument('--mono_depth_weight', type=float, default=0.0005, help="The rate of monodepth loss")
     parser.add_argument('--lambda_t_norm', type=float, default=0.0005)
     parser.add_argument('--mono_loss_type', type=str, default="mid")
+    parser.add_argument('--w_pose', action='store_true', default=False,
+                        help='use diff-gaussian-rasterization-w-pose ')   
+    parser.add_argument('--freeze_pos', action='store_true', default=False,
+                        help='freeze_pos')      
 
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)

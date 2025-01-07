@@ -101,7 +101,7 @@ def loadCam(args,
         resized_confidence = cv2.resize(loaded_confidence, resolution, interpolation=cv2.INTER_NEAREST)
         confidence = torch.from_numpy(resized_confidence).unsqueeze(0)
 
-    if False:
+    if args.w_pose:
         return Camera_w_pose(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                       FoVx=cam_info.FovX, FoVy=cam_info.FovY, cx=cam_info.cx, cy=cam_info.cy,
                       image=gt_image, gt_alpha_mask=loaded_mask, mono_depth=mono_depth,
