@@ -27,8 +27,9 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
     gaussians.load_ply(ply_path)
     iteration = 1
     model_path = "./data/R63_three_view"
-    torch.save((gaussians.capture(), iteration), "/ckpt" + str(iteration) + ".pth")
-
+    torch.save((gaussians.capture(), iteration), model_path + "/ckpt" + str(iteration) + ".pth")
+    print("finished")
+    
 if __name__ == "__main__":
     # Set up command line argument parser
     parser = ArgumentParser(description="Training script parameters")
