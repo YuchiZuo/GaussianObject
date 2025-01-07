@@ -113,8 +113,11 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
             render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
 
         # Loss
-        loss, Ll1 = cal_loss(opt, args, image, render_pkg, viewpoint_cam, bg, tb_writer=tb_writer, iteration=iteration, mono_loss_type=args.mono_loss_type,w_pose=w_pose)
-
+        loss, Ll1 = cal_loss(opt, args, image, render_pkg, viewpoint_cam, bg, tb_writer=tb_writer, iteration=iteration, mono_loss_type=args.mono_loss_type,w_pose=args.w_pose)
+        loss_normal = cal_normal_loss(gaussians)
+        loss = loss + 0.01 * loss_normal
+        
+        
         loss.backward()
         iter_end.record()  # type: ignore
 
@@ -129,7 +132,7 @@ def training(args, dataset, opt, pipe, testing_iterations, saving_iterations, ch
                 progress_bar.close()
 
             # Log and save
-            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background))
+            training_report(tb_writer, iteration, loss_normal, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background))
             if (iteration in saving_iterations):
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
@@ -205,9 +208,9 @@ def prepare_output_and_logger(args):
         print("Tensorboard not available: not logging progress")
     return tb_writer
 
-def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs):
+def training_report(tb_writer, iteration, loss_normal, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs):
     if tb_writer:
-        tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
+        tb_writer.add_scalar('train_loss_patches/normal_loss', loss_normal.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss.item(), iteration)
         tb_writer.add_scalar('iter_time', elapsed, iteration)
         tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)
@@ -314,6 +317,11 @@ def cal_loss(opt, args, image, render_pkg, viewpoint_cam, bg, silhouette_loss_ty
             tb_writer.add_scalar('loss/tracking_loss', tracking_loss, iteration)
 
     return loss, L_loss
+
+def cal_normal_loss(gaussians):
+    normal_ref = gaussians.get_ref_normal
+    normal_pred = gaussians.get_minimum_axis   
+    return l2_loss(normal_ref, normal_pred)
 
 if __name__ == "__main__":
     # Set up command line argument parser

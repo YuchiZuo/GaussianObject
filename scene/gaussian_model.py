@@ -11,7 +11,7 @@
 
 import torch
 import numpy as np
-from utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
+from utils.general_utils import get_minimum_axis,inverse_sigmoid, get_expon_lr_func, build_rotation
 from torch import nn
 import os
 from utils.system_utils import mkdir_p
@@ -59,6 +59,7 @@ class GaussianModel:
         self.spatial_lr_scale = 0
         self._backup_attributes = {}
         self.setup_functions()
+        self._normal = torch.empty(0)
 
     def capture(self):
         return (
@@ -125,6 +126,14 @@ class GaussianModel:
     def get_opacity(self):
         return self.opacity_activation(self._opacity)
     
+    @property
+    def get_ref_normal(self):
+        return self._normal  
+
+    @property
+    def get_minimum_axis(self):
+        return get_minimum_axis(self.get_scaling, self.get_rotation)
+
     def get_covariance(self, scaling_modifier = 1.0):
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
 
@@ -139,6 +148,8 @@ class GaussianModel:
         features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()
         features[:, :3, 0 ] = fused_color
         features[:, 3:, 1:] = 0.0
+        normals = torch.tensor(np.asarray(pcd.normals)).float().cuda()
+        self._normal = normals
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
