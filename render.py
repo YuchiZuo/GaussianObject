@@ -299,7 +299,7 @@ def render_path(dataset : ModelParams, iteration : int, pipeline : PipelineParam
         view.image_height = image_size
         view.FoVx = focal2fov(focal_length_x, image_size)
         view.FoVy = focal2fov(focal_length_y, image_size)
-        view.projection_matrix = getProjectionMatrix(znear=view.znear, zfar=view.zfar, fovX=view.FoVx, fovY=view.FoVy).transpose(0,1).cuda().float()
+        view.projection_matrix = getProjectionMatrix(znear=view.znear, zfar=view.zfar, fovX=view.FoVx, fovY=view.FoVy,cx =view.cx ,cy = view.cy).transpose(0,1).cuda().float()
         view.full_proj_transform = (view.world_view_transform.unsqueeze(0).bmm(view.projection_matrix.unsqueeze(0))).squeeze(0)
 
         render_pkg = render(view, gaussians, pipeline, background)

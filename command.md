@@ -16,3 +16,8 @@ usage: train_gs.py [-h] [--sh_degree SH_DEGREE] [--source_path SOURCE_PATH] [--m
 & E:/Conda/gs_cu121/python.exe d:/Desk/deepLearning/work/3dgs/modified/GaussianObject/train_gs.py --source_path data/R63_three_view  --model_path output/v2_w_pose --resolution 1 --white_background --sparse_view_num 3 --sh_degree 3 --init_pcd_name points3D --save_iterations 1 500 2000 5000
 
 & E:/Conda/gs_cu121/python.exe d:/Desk/deepLearning/work/3dgs/modified/GaussianObject/train_gs.py --source_path data/R63_three_view   --resolution 1 --white_background --sparse_view_num 3 --save_iterations 1 500 2000 5000 --init_pcd_name points3D --model_path output/woPose_freezeXYZ_sh0_voxel0.03 --sh_degree 0 
+
+python train_gs.py --source_path data/R63_three_view   --resolution 1 --white_background --sparse_view_num 3 --save_iterations 500 5000 --test_iterations 1 100 500 2000 5000 --model_path output/woPose_freezeXYZ_sh3_voxel0.03_modelInit --sh_degree 3 --init_pcd_name points3D   --start_checkpoint ./data/R63_three_view/ckpt1.pth --freeze_pos
+
+command="python train_gs.py --source_path data/R63_three_view   --resolution 1 --white_background --sparse_view_num 3 --save_iterations 500 5000 --test_iterations 1 100 500 2000 5000 --model_path output/woPose_freezeXYZ_sh3_voxel0.03_modelInit --sh_degree 3 --init_pcd_name points3D   --start_checkpoint ./data/R63_three_view/ckpt1.pth --freeze_pos"
+nohup $command & 

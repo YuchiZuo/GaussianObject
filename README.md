@@ -241,7 +241,7 @@ The final 3DGS representation is saved in `output/gaussian_object/kitchen/save/l
 # render the test set
 python render.py \
     -m output/gs_init/kitchen \
-    --sparse_view_num 4 --sh_degree 2 \
+    --sparse_view_num 4 --sh_degree 3 \
     --init_pcd_name visual_hull_4 \
     --white_background --skip_all --skip_train \
     --load_ply output/gaussian_object/kitchen/save/last.ply

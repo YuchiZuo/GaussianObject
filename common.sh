@@ -10,10 +10,10 @@ python train_gs.py \
     --random_background
 
 python render.py \
-    -m output/gs_init/my_car \
-    --sparse_view_num 2 --sh_degree 2 \
-    --init_pcd_name Point3D \
-    --white_background --skip_all --skip_train
+    -m output/wPose_freezeXYZ_sh3_voxel0.03_modelInit \
+    --sparse_view_num 3 --sh_degree 3 \
+    --iteration 2000\
+    --white_background --skip_all --skip_train --render_path
 
 python render.py \
     -m output/gs_init/my_car \
